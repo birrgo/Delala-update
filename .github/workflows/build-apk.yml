@@ -112,30 +112,8 @@ jobs:
           chmod +x gradlew
           ./gradlew assembleRelease
 
-      - name: Decode Keystore Secret
-        run: |
-          echo "${{ secrets.KEYSTORE_BASE64 }}" | tr -d '\n' | base64 -d -i > release-key.jks
-
-      - name: Align and Sign APK
-        run: |
-          BUILD_TOOLS=$(ls -d $ANDROID_HOME/build-tools/* | tail -n 1)
-          
-          # 1. Zipalign the unaligned APK
-          $BUILD_TOOLS/zipalign -v -p 4 \
-            android/app/build/outputs/apk/release/app-release-unsigned.apk \
-            android/app/build/outputs/apk/release/app-release-aligned.apk
-
-          # 2. Sign using apksigner (v2/v3 scheme)
-          $BUILD_TOOLS/apksigner sign \
-            --ks release-key.jks \
-            --ks-pass pass:"${{ secrets.KEYSTORE_PASSWORD }}" \
-            --key-pass pass:"${{ secrets.KEY_PASSWORD }}" \
-            --ks-key-alias "${{ secrets.KEY_ALIAS }}" \
-            --out android/app/build/outputs/apk/release/app-release-signed.apk \
-            android/app/build/outputs/apk/release/app-release-aligned.apk
-
-      - name: Upload Signed APK
+      - name: Upload Unsigned APK
         uses: actions/upload-artifact@v4
         with:
-          name: hulum-gebeya-signed-apk
-          path: android/app/build/outputs/apk/release/app-release-signed.apk
+          name: hulum-gebeya-unsigned-apk
+          path: android/app/build/outputs/apk/release/app-release-unsigned.apk
