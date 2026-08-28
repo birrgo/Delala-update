@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>App Viewer</title>
+  
+  <link rel="stylesheet" href="Apps.css">
+  <link rel="stylesheet" href="wallet.css">
+
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
+  <style>
+    body, html {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background-color: #ffffff;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+
+    .app-frame-container {
+      width: 100%;
+      height: 100%;
+      position: relative;
+      background: #ffffff;
+    }
+
+    .app-iframe {
+      width: 100%;
+      height: 100%;
+      border: none;
+      display: block;
+    }
+
+    /* PURE WHITE FULLSCREEN OVERLAY */
+    .loading-overlay {
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: #ffffff;
+      color: #121212;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 20;
+      text-align: center;
+    }
+
+    /* CLEAN MODERN APP OPENING INDICATOR */
+    .app-opening-card {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+    }
+
+    .loader-spinner {
+      width: 42px;
+      height: 42px;
+      border: 4px solid #e2e8f0;
+      border-top-color: #0d1b2a;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    .opening-text {
+      font-size: 18px;
+      font-weight: 600;
+      color: #0d1b2a;
+      letter-spacing: -0.2px;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="app-frame-container">
+    <!-- FULLSCREEN LOADING OVERLAY -->
+    <div class="loading-overlay" id="frameLoader">
+      <div class="app-opening-card">
+        <div class="loader-spinner"></div>
+        <div class="opening-text" id="loaderStatus">Opening Application...</div>
+      </div>
+    </div>
+    
+    <iframe id="appIframe" class="app-iframe" src="" allowfullscreen></iframe>
+  </div>
+
+  <script>
+    // Updated Firebase Configuration (hulum-e358c)
+    const firebaseConfig = {
+      apiKey: "AIzaSyD9rJzhpR8IV0sTTgPOezZoh3qJpvI6Gjk",
+      authDomain: "hulum-e358c.firebaseapp.com",
+      databaseURL: "https://hulum-e358c-default-rtdb.firebaseio.com",
+      projectId: "hulum-e358c",
+      storageBucket: "hulum-e358c.firebasestorage.app",
+      messagingSenderId: "678316597629",
+      appId: "1:678316597629:web:dc6af499b8054a424aac14",
+      measurementId: "G-097P51SP2B"
+    };
+
+    if (!firebase.apps.length) {
+      firebase.initializeApp(firebaseConfig);
+    }
+    const db = firebase.database();
+
+    function goBackToStore() {
+      window.location.replace('apps.html');
+    }
+
+    // Force refresh if re-opened via Back/Forward Cache
+    window.addEventListener('pageshow', (event) => {
+      if (event.persisted) {
+        window.location.reload();
+      }
+    });
+
+    function initAppView(appKey) {
+      const loader = document.getElementById('frameLoader');
+      
+      if (loader) loader.style.display = 'flex';
+
+      db.ref('pwa_apps/' + appKey).once('value').then((snapshot) => {
+        if (!snapshot.exists()) {
+          alert("App data not found.");
+          goBackToStore();
+          return;
+        }
+
+        const appData = snapshot.val();
+        const appName = appData.name || 'Application';
+        const sourceType = appData.sourceType || 'website';
+        let targetUrl = (appData.url || '').trim();
+
+        if (!targetUrl.startsWith('http://') && !targetUrl.startsWith('https://')) {
+          targetUrl = 'https://' + targetUrl;
+        }
+
+        const category = appData.category;
+        const canIframe = appData.canIframe;
+
+        if (sourceType === 'playstore' || sourceType === 'appstore' || category === 'invalid' || canIframe === false) {
+          window.location.replace(targetUrl);
+          return;
+        }
+
+        document.getElementById('loaderStatus').textContent = `Opening ${appName}...`;
+        const iframe = document.getElementById('appIframe');
+
+        // Silent 5-second minimum wait timer
+        const minimumWaitTime = new Promise((resolve) => setTimeout(resolve, 5000));
+        const iframeLoadEvent = new Promise((resolve) => {
+          iframe.onload = resolve;
+        });
+
+        // Hide overlay ONLY after 5 full seconds pass AND iframe completes loading
+        Promise.all([minimumWaitTime, iframeLoadEvent]).then(() => {
+          if (loader) loader.style.display = 'none';
+        });
+
+        iframe.src = targetUrl;
+
+      }).catch((err) => {
+        console.error("Failed to fetch app info:", err);
+        alert("Error loading app details.");
+        goBackToStore();
+      });
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      const appKey = urlParams.get('key');
+
+      if (!appKey) {
+        alert("Invalid app key specified.");
+        goBackToStore();
+        return;
+      }
+
+      initAppView(appKey);
+    });
+  </script>
+</body>
+</html>
