@@ -1,0 +1,129 @@
+name: Convert PWA to APK
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Setup Java (Updated to v21)
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+
+      - name: Prepare Web Directory
+        run: |
+          mkdir www
+          rsync -a --exclude='.git' --exclude='.github' --exclude='www' ./ www/
+
+      - name: Inject CSS Fix for Header Overlap
+        run: |
+          find www -type f -name "*.html" -exec sed -i 's|</head>|<style>.nav-header { padding-top: 36px !important; padding-bottom: 8px !important; }</style></head>|g' {} +
+
+      - name: Install Android Packaging Tools & Plugins
+        run: |
+          npm install @capacitor/core @capacitor/cli
+          npx cap init "hulum Gebeya" "com.hulum.app" --web-dir www
+          
+          npm install @capacitor/android @capacitor/status-bar @capacitor/app
+          
+          cat << 'EOF' > capacitor.config.json
+          {
+            "appId": "com.hulum.app",
+            "appName": "hulum Gebeya",
+            "webDir": "www",
+            "plugins": {
+              "StatusBar": {
+                "overlaysWebView": false,
+                "backgroundColor": "#081B38"
+              }
+            }
+          }
+          EOF
+          
+          npx cap add android
+
+      - name: Generate App Icon from s.png
+        run: |
+          mkdir -p assets
+          cp s.png assets/icon.png
+          npm install @capacitor/assets --save-dev
+          npx capacitor-assets generate --android
+          npx cap sync android
+
+      - name: Add Location Permissions to Android Manifest
+        run: |
+          MANIFEST="android/app/src/main/AndroidManifest.xml"
+          sed -i '/<application/i \    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />\n    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />\n    <uses-feature android:name="android.hardware.location.gps" android:required="false" />' $MANIFEST
+
+      - name: Apply Custom Android Styles
+        run: |
+          mkdir -p android/app/src/main/res/values
+          cat << 'EOF' > android/app/src/main/res/values/styles.xml
+          <?xml version="1.0" encoding="utf-8"?>
+          <resources>
+              <style name="AppTheme" parent="Theme.AppCompat.Light.NoActionBar">
+                  <item name="colorPrimary">#0F2C59</item>
+                  <item name="colorPrimaryDark">#081B38</item>
+                  <item name="colorAccent">#0F2C59</item>
+                  <item name="android:windowTranslucentStatus">false</item>
+                  <item name="android:statusBarColor">#081B38</item>
+                  <item name="android:fitsSystemWindows">true</item>
+              </style>
+
+              <style name="AppTheme.NoActionBar" parent="AppTheme">
+                  <item name="windowActionBar">false</item>
+                  <item name="windowNoTitle">true</item>
+              </style>
+
+              <style name="AppTheme.NoActionBarLaunch" parent="AppTheme.NoActionBar">
+                  <item name="android:background">@drawable/splash</item>
+              </style>
+          </resources>
+          EOF
+
+      - name: Build Unsigned APK
+        run: |
+          cd android
+          chmod +x gradlew
+          ./gradlew assembleRelease
+
+      - name: Decode Keystore Secret
+        run: |
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | tr -d '\n' | base64 -d -i > release-key.jks
+
+      - name: Align and Sign APK
+        run: |
+          BUILD_TOOLS=$(ls -d $ANDROID_HOME/build-tools/* | tail -n 1)
+          
+          # 1. Zipalign the unaligned APK
+          $BUILD_TOOLS/zipalign -v -p 4 \
+            android/app/build/outputs/apk/release/app-release-unsigned.apk \
+            android/app/build/outputs/apk/release/app-release-aligned.apk
+
+          # 2. Sign using apksigner (v2/v3 scheme)
+          $BUILD_TOOLS/apksigner sign \
+            --ks release-key.jks \
+            --ks-pass pass:"${{ secrets.KEYSTORE_PASSWORD }}" \
+            --key-pass pass:"${{ secrets.KEY_PASSWORD }}" \
+            --ks-key-alias "${{ secrets.KEY_ALIAS }}" \
+            --out android/app/build/outputs/apk/release/app-release-signed.apk \
+            android/app/build/outputs/apk/release/app-release-aligned.apk
+
+      - name: Upload Signed APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: hulum-gebeya-signed-apk
+          path: android/app/build/outputs/apk/release/app-release-signed.apk
