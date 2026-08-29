@@ -106,14 +106,14 @@ jobs:
           </resources>
           EOF
 
-      - name: Build Unsigned APK
+      - name: Build Debug APK (Auto-Signed)
         run: |
           cd android
           chmod +x gradlew
-          ./gradlew assembleRelease
+          ./gradlew assembleDebug
 
-      - name: Upload Unsigned APK
+      - name: Upload Debug APK
         uses: actions/upload-artifact@v4
         with:
-          name: hulum-gebeya-unsigned-apk
-          path: android/app/build/outputs/apk/release/app-release-unsigned.apk
+          name: hulum-gebeya-debug-apk
+          path: android/app/build/outputs/apk/debug/app-debug.apk
