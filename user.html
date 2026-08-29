@@ -36,7 +36,6 @@
         .metric-num { font-size: 16px; font-weight: 900; color: #0F172A; }
         .metric-label { font-size: 11px; color: #64748B; font-weight: 700; text-transform: uppercase; margin-top: 2px; }
 
-        /* Fixed the tab bar: Removed sticky positioning to stop it breaking/overlapping the grid */
         .category-tabs-bar { display: flex; align-items: center; justify-content: center; gap: 16px; padding: 12px 16px; background: #FFFFFF; border-bottom: 1px solid var(--border-light); }
         .category-pill-btn { padding: 6px 16px; border-radius: 20px; background: transparent; border: none; color: #64748B; font-size: 13px; font-weight: 800; }
         .category-pill-btn.active { color: #0F172A; position: relative; }
@@ -52,6 +51,20 @@
         .skeleton-item { aspect-ratio: 3/4; background: linear-gradient(90deg, #E2E8F0 25%, #F1F5F9 50%, #E2E8F0 75%); background-size: 200% 100%; animation: skeletonLoading 1.5s infinite; }
         @keyframes skeletonLoading { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
 
+        /* Blurred Skeleton Bottom Loader */
+        .bottom-skeleton-container {
+            grid-column: span 3;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 2px;
+            padding-top: 2px;
+            filter: blur(2.5px);
+            opacity: 0.7;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+        .bottom-skeleton-container.hidden { display: none; }
+
         .loader-spinner { width: 24px; height: 24px; border: 3px solid #E2E8F0; border-top-color: #2563EB; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto; }
         @keyframes spin { to { transform: rotate(360deg); } }
         
@@ -66,6 +79,8 @@
         .modal-header h3 { margin: 0; font-size: 15px; font-weight: 800; color: #0F172A; }
         .modal-close-btn { background: none; border: none; font-size: 18px; cursor: pointer; color: #64748B; font-weight: 700; }
         .modal-body { padding: 16px 20px; overflow-y: auto; font-size: 12px; display: flex; flex-direction: column; gap: 12px; }
+
+        #gridSentinel { grid-column: span 3; height: 20px; width: 100%; }
     </style>
 </head>
 <body>
@@ -126,6 +141,13 @@
                 <div class="skeleton-item" id="skel2"></div>
                 <div class="skeleton-item" id="skel3"></div>
             </main>
+
+            <!-- Blur Skeleton Loader visual below grid -->
+            <div class="bottom-skeleton-container hidden" id="bottomBlurLoader">
+                <div class="skeleton-item"></div>
+                <div class="skeleton-item"></div>
+                <div class="skeleton-item"></div>
+            </div>
         </div>
     </div>
 
@@ -168,6 +190,13 @@
         let targetProfileData = {};
         let targetPosts = [];
 
+        // Dynamic 3-by-3 Fast Controls
+        let renderedIndex = 0;
+        const INITIAL_BATCH = 9; // Render 9 items (3 rows) on start
+        const CHUNK_BATCH = 3;   // Rapidly stream 3 items (1 row) per batch
+        let scrollObserver = null;
+        let isFetchingBackground = false;
+
         function showToast(message) {
             const toast = document.getElementById('toastNotification');
             document.getElementById('toastMessage').innerText = message;
@@ -180,6 +209,14 @@
             if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
             if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
             return num.toLocaleString();
+        }
+
+        function toggleBlurLoader(show) {
+            const blurContainer = document.getElementById('bottomBlurLoader');
+            if (blurContainer) {
+                if (show) blurContainer.classList.remove('hidden');
+                else blurContainer.classList.add('hidden');
+            }
         }
 
         document.addEventListener('DOMContentLoaded', () => {
@@ -195,6 +232,7 @@
                 window.location.href = `chat1.html?userId=${encodeURIComponent(targetUserId)}`;
             });
 
+            // Cache profile check
             const cachedProfile = localStorage.getItem(`profileCache_${targetUserId}`);
             if (cachedProfile) {
                 const parsed = JSON.parse(cachedProfile);
@@ -202,16 +240,27 @@
                 renderProfileHeader(targetProfileData, parsed.followersCount, parsed.followingCount);
             }
 
+            // Cache posts check
             const cachedPosts = localStorage.getItem(`postsCache_${targetUserId}`);
             if (cachedPosts) {
                 targetPosts = JSON.parse(cachedPosts);
-                renderPostsGrid(targetPosts); 
+                document.getElementById('targetPostsCount').innerText = formatCount(targetPosts.length);
+                startChunkedRender(targetPosts); 
             }
 
             setupAuthAndLoadData();
             
             document.getElementById('networkModal').addEventListener('click', (e) => {
                 if (e.target.id === 'networkModal') document.getElementById('networkModal').classList.remove('active');
+            });
+
+            // Scroll Fallback Listener to make sure it never freezes at any item count
+            window.addEventListener('scroll', () => {
+                if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight - 500) {
+                    if (renderedIndex < targetPosts.length) {
+                        renderNextBatch();
+                    }
+                }
             });
         });
 
@@ -360,7 +409,7 @@
                     await set(targetUserRef, newCount); await set(myFollowingRef, myFollowingCount + 1);
 
                     btn.classList.remove('btn-follow'); btn.classList.add('btn-unfollow');
-                    text.innerText = "Unfollow"; icon.innerHTML = `<line x1="5" y1="12" x2="19" y2="12"></line>`;
+                    text.innerText = "Unfollow"; icon.innerHTML = `<line x1="12" y1="5" x2="12" y2="19"></line>`;
                     showToast("Following User");
                 }
             } catch (err) { showToast("Failed to update status."); } 
@@ -448,7 +497,6 @@
             if (post.images && post.images.length > 0) mediaSrc = post.images[0];
             else if (post.imageUrl || post.image || post.mediaUrl || post.photo) mediaSrc = (post.imageUrl || post.image || post.mediaUrl || post.photo);
             
-            // Adding loading="lazy" handles performance automatically so we don't need complex infinite scrolling
             return `<div class="post-grid-item" onclick="window.location.href='rentalfull.html?id=${encodeURIComponent(post.id)}&path=${encodeURIComponent(post._dbPath || 'posts')}'">
                         <img src="${mediaSrc}" alt="Post" loading="lazy">
                         <div class="post-views-count">
@@ -458,27 +506,89 @@
                     </div>`;
         }
 
-        // Changed back to rendering EVERYTHING immediately. Native HTML loading="lazy" will prevent the device from crashing.
-        function renderPostsGrid(postsArray) {
+        // Fast Step-by-Step 3-by-3 Renderer
+        function startChunkedRender(postsArray) {
             const container = document.getElementById('targetPostsGrid');
+            renderedIndex = 0;
             
             if (!postsArray || postsArray.length === 0) {
-                if (container.children[0]?.id === 'skel1') return; // Do nothing if initial load isn't complete
                 container.innerHTML = `<div class="empty-grid-msg">No active listings available.</div>`;
+                toggleBlurLoader(false);
                 return;
             }
 
-            container.innerHTML = postsArray.map(buildPostHTML).join(''); 
+            container.innerHTML = '';
+            renderNextBatch();
+            setupInfiniteScrollObserver();
+        }
+
+        function renderNextBatch() {
+            if (renderedIndex >= targetPosts.length) {
+                if (!isFetchingBackground) toggleBlurLoader(false);
+                return;
+            }
+
+            const container = document.getElementById('targetPostsGrid');
+            const batchSize = (renderedIndex === 0) ? INITIAL_BATCH : CHUNK_BATCH;
+            const nextIndex = Math.min(renderedIndex + batchSize, targetPosts.length);
+            const batchItems = targetPosts.slice(renderedIndex, nextIndex);
+
+            const htmlChunk = batchItems.map(buildPostHTML).join('');
+            
+            container.insertAdjacentHTML('beforeend', htmlChunk);
+            renderedIndex = nextIndex;
+
+            // Show blur loader if more items remain or background fetch is busy
+            if (renderedIndex < targetPosts.length || isFetchingBackground) {
+                toggleBlurLoader(true);
+            } else {
+                toggleBlurLoader(false);
+            }
+        }
+
+        function checkAndFillViewport() {
+            const sentinel = document.getElementById('gridSentinel');
+            if (!sentinel) return;
+            
+            const rect = sentinel.getBoundingClientRect();
+            if (rect.top <= window.innerHeight + 400 && renderedIndex < targetPosts.length) {
+                renderNextBatch();
+                requestAnimationFrame(checkAndFillViewport);
+            }
+        }
+
+        function setupInfiniteScrollObserver() {
+            let sentinel = document.getElementById('gridSentinel');
+            if (!sentinel) {
+                sentinel = document.createElement('div');
+                sentinel.id = 'gridSentinel';
+                document.getElementById('targetPostsGrid').after(sentinel);
+            }
+
+            if (scrollObserver) scrollObserver.disconnect();
+
+            scrollObserver = new IntersectionObserver((entries) => {
+                if (entries[0].isIntersecting && renderedIndex < targetPosts.length) {
+                    renderNextBatch();
+                    requestAnimationFrame(checkAndFillViewport);
+                }
+            }, { rootMargin: '400px' });
+
+            scrollObserver.observe(sentinel);
+            setTimeout(checkAndFillViewport, 50);
         }
 
         async function fetchTargetUserPosts() {
             try {
+                isFetchingBackground = true;
+                toggleBlurLoader(true);
+
                 const searchIds = new Set([targetUserId]);
                 if (targetProfileData.cleanPhone) searchIds.add(targetProfileData.cleanPhone);
                 if (targetProfileData.phone) searchIds.add(String(targetProfileData.phone).replace(/\D/g, '').replace(/^0+/, ''));
                 if (targetProfileData.uid) searchIds.add(targetProfileData.uid);
                 
-                // Fetch fast initial items if cache is empty
+                // Fast Initial Fetch
                 if (targetPosts.length === 0) {
                     let fastPosts = [];
                     const seenFast = new Set();
@@ -500,11 +610,12 @@
 
                     if (fastPosts.length > 0) {
                         fastPosts.sort((a, b) => (b.createdAt || b.timestamp || 0) - (a.createdAt || a.timestamp || 0));
-                        renderPostsGrid(fastPosts); 
+                        targetPosts = fastPosts;
+                        startChunkedRender(targetPosts); 
                     }
                 }
 
-                // Background fetch EVERYTHING without limits
+                // Complete Background Fetch for all 36+ items
                 let allPosts = [];
                 const seenAll = new Set();
                 
@@ -527,12 +638,19 @@
                 
                 targetPosts = allPosts;
                 document.getElementById('targetPostsCount').innerText = formatCount(targetPosts.length);
-                
                 localStorage.setItem(`postsCache_${targetUserId}`, JSON.stringify(targetPosts));
-                
-                // Directly render all 30+ items at once.
-                renderPostsGrid(targetPosts); 
+
+                isFetchingBackground = false;
+
+                // Continue 3-by-3 loading seamless stream without resetting current view
+                checkAndFillViewport();
+                if (renderedIndex >= targetPosts.length) {
+                    toggleBlurLoader(false);
+                }
+
             } catch(e) {
+                isFetchingBackground = false;
+                toggleBlurLoader(false);
                 if(targetPosts.length === 0) document.getElementById('targetPostsGrid').innerHTML = `<div class="empty-grid-msg">Failed to load listings.</div>`; 
             }
         }

@@ -10,8 +10,10 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link rel="stylesheet" href="news.css">
     <style>
-        .nav-header { padding: 6px 16px !important; height: 46px !important; min-height: 46px !important; display: flex; align-items: center; justify-content: space-between; }
-        .header-title-text { font-size: 16px !important; margin: 0 !important; }
+        /* Updated Navigation Header for Status Bar Clearance */
+        .nav-header { padding: max(32px, env(safe-area-inset-top, 32px)) 16px 8px !important; height: auto !important; min-height: 46px !important; display: flex; align-items: center; justify-content: space-between; background: #0F172A; box-sizing: border-box; }
+        .header-title-text { font-size: 16px !important; margin: 0 !important; color: white; }
+        
         .profile-info-section { position: relative; z-index: 5; display: flex; flex-direction: row; align-items: flex-start; gap: 14px; padding: 12px 16px 8px; text-align: left; }
         .profile-left-col { display: flex; flex-direction: column; align-items: center; flex-shrink: 0; width: 72px; }
         .profile-right-col { display: flex; flex-direction: column; justify-content: center; flex: 1; min-width: 0; padding-top: 2px; }
@@ -47,7 +49,11 @@
         
         .posts-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px; background: #E2E8F0; width: 100%; min-height: 40vh; }
         .post-grid-item { position: relative; aspect-ratio: 3 / 4; background: #0F172A; overflow: hidden; cursor: pointer; }
-        .post-grid-item img, .post-grid-item video { width: 100%; height: 100%; object-fit: cover; background: #1E293B; display: block; }
+        
+        /* Updates for Progressive Loading Blur Effect */
+        .post-grid-item img, .post-grid-item video { width: 100%; height: 100%; object-fit: cover; background: #1E293B; display: block; transition: filter 0.4s ease, opacity 0.4s ease; }
+        .lazy-blur { filter: blur(15px); opacity: 0.5; }
+        
         .post-views-count { position: absolute; bottom: 5px; left: 5px; display: flex; align-items: center; gap: 3px; color: #FFF; font-size: 11px; font-weight: 700; text-shadow: 0 1px 3px rgba(0,0,0,0.8); z-index: 2; }
         .post-views-count svg { width: 12px; height: 12px; fill: currentColor; stroke: none; }
         .empty-grid-msg { grid-column: span 3; text-align: center; padding: 40px 16px; color: #64748B; font-size: 13px; font-weight: 600; background: #F8FAFC; }
@@ -108,7 +114,7 @@
         <header class="nav-header">
             <h1 class="header-title-text" style="color: white;">Profile</h1>
             <div class="header-left-group" style="justify-content: flex-end; display: flex; align-items: center; gap: 8px;">
-                <div class="header-live-clock-badge" id="topCornerLiveClock" style="color: white;">--:--:--</div>
+                <div class="header-live-clock-badge" id="topCornerLiveClock" style="color: white; font-weight: bold; font-size: 12px; background: rgba(255,255,255,0.15); padding: 4px 8px; border-radius: 12px;">--:--:--</div>
                 <div class="menu-wrapper">
                     <button class="menu-action-btn" id="openMenuBtn" aria-label="Open Menu" style="color: white;">
                         <svg viewBox="0 0 24 24"><line x1="4" y1="6" x2="20" y2="6"></line><line x1="4" y1="12" x2="20" y2="12"></line><line x1="4" y1="18" x2="20" y2="18"></line></svg>
@@ -188,49 +194,10 @@
         </nav>
     </div>
 
-    <div class="modal-overlay" id="authPromptModal">
-        <div class="modal-card">
-            <div class="modal-header">
-                <h3>Account Required</h3>
-                <button type="button" class="modal-close-btn" id="closeAuthModalBtn">✕</button>
-            </div>
-            <div class="modal-body auth-prompt-card">
-                <div class="auth-prompt-icon">
-                    <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
-                </div>
-                <h4 style="font-size:16px; font-weight:800; color:#0F172A; margin:0 0 6px;">Sign in to Delala</h4>
-                <p style="color:#64748B; font-size:12px; margin:0 0 18px; line-height:1.4;">Please log in or create a new account to view profile posts, manage listings, and upload content.</p>
-                <a href="login.html" class="auth-btn-primary">Log In</a>
-                <a href="register.html" class="auth-btn-secondary">Create Account</a>
-            </div>
-        </div>
-    </div>
-
-    <div class="modal-overlay" id="postPreviewModal">
-        <div class="modal-card">
-            <div class="modal-header"><h3>Post Details</h3><button type="button" class="modal-close-btn" id="closePreviewModalBtn">✕</button></div>
-            <div class="modal-body" id="modalPreviewBody"></div>
-        </div>
-    </div>
-
-    <div class="modal-overlay" id="verifyDeleteModal">
-        <div class="modal-card">
-            <div class="modal-header"><h3>Verify Deletion</h3><button type="button" class="modal-close-btn" id="closeVerifyModalBtn">✕</button></div>
-            <div class="modal-body">
-                <div class="verify-icon-wrapper"><svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg></div>
-                <p class="verify-subtitle">Enter your registered <strong>6-digit Security PIN</strong> to delete this post.</p>
-                <div class="verify-input-group">
-                    <label class="verify-input-label" for="verifyPhonePinInput">Security PIN</label>
-                    <input type="password" id="verifyPhonePinInput" class="verify-input" maxlength="6" pattern="[0-9]{6}" inputmode="numeric" placeholder="••••••" autocomplete="off" />
-                </div>
-                <div class="verify-error-msg" id="verifyErrorMsg">Verification failed. Incorrect PIN code.</div>
-                <div class="verify-btn-group">
-                    <button type="button" class="btn-secondary" id="cancelVerifyBtn">Cancel</button>
-                    <button type="button" class="btn-danger" id="confirmDeleteBtn">Delete Post</button>
-                </div>
-            </div>
-        </div>
-    </div>
+    <!-- Modals (Auth, Preview, Verify) kept untouched for brevity in layout -->
+    <div class="modal-overlay" id="authPromptModal"><div class="modal-card"><div class="modal-header"><h3>Account Required</h3><button type="button" class="modal-close-btn" id="closeAuthModalBtn">✕</button></div><div class="modal-body auth-prompt-card"><div class="auth-prompt-icon"><svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg></div><h4 style="font-size:16px; font-weight:800; color:#0F172A; margin:0 0 6px;">Sign in to Delala</h4><p style="color:#64748B; font-size:12px; margin:0 0 18px; line-height:1.4;">Please log in or create a new account to view profile posts, manage listings, and upload content.</p><a href="login.html" class="auth-btn-primary">Log In</a><a href="register.html" class="auth-btn-secondary">Create Account</a></div></div></div>
+    <div class="modal-overlay" id="postPreviewModal"><div class="modal-card"><div class="modal-header"><h3>Post Details</h3><button type="button" class="modal-close-btn" id="closePreviewModalBtn">✕</button></div><div class="modal-body" id="modalPreviewBody"></div></div></div>
+    <div class="modal-overlay" id="verifyDeleteModal"><div class="modal-card"><div class="modal-header"><h3>Verify Deletion</h3><button type="button" class="modal-close-btn" id="closeVerifyModalBtn">✕</button></div><div class="modal-body"><div class="verify-icon-wrapper"><svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg></div><p class="verify-subtitle">Enter your registered <strong>6-digit Security PIN</strong> to delete this post.</p><div class="verify-input-group"><label class="verify-input-label" for="verifyPhonePinInput">Security PIN</label><input type="password" id="verifyPhonePinInput" class="verify-input" maxlength="6" pattern="[0-9]{6}" inputmode="numeric" placeholder="••••••" autocomplete="off" /></div><div class="verify-error-msg" id="verifyErrorMsg">Verification failed. Incorrect PIN code.</div><div class="verify-btn-group"><button type="button" class="btn-secondary" id="cancelVerifyBtn">Cancel</button><button type="button" class="btn-danger" id="confirmDeleteBtn">Delete Post</button></div></div></div></div>
 
     <div id="menuIframeOverlay" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.3); z-index: 10049;"></div>
     <iframe id="menuIframe" src="menu.html" style="position: fixed; top: 0; right: -75%; width: 75%; height: 100vh; z-index: 10050; border: none; background: white; transition: right 0.3s ease;"></iframe>
@@ -246,11 +213,84 @@
         window.activeCategory = localStorage.getItem('delala_active_category') || 'all';
         window.isPostsLoaded = false;
         
+        // Progress load tracker
+        let batchLoadTimer = null;
+        
         function formatCount(count) {
             const num = parseInt(count) || 0;
             if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
             if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
             return num.toLocaleString();
+        }
+
+        /* --- Updated Grid Loader with Staggered 3-item Progressive Batch Rendering --- */
+        function renderNativeGrid() {
+            const container = document.getElementById('postsGridContainer');
+            if (!container) return;
+
+            const category = window.activeCategory || 'all';
+            let filtered = [];
+
+            if (category === 'hidden') {
+                filtered = (window.allUserPosts || []).filter(p => p && p.isHidden === true);
+            } else {
+                filtered = (window.allUserPosts || []).filter(p => p && p.isHidden !== true);
+            }
+
+            window.currentDisplayedPosts = filtered;
+            clearTimeout(batchLoadTimer);
+
+            if (filtered.length === 0) {
+                container.innerHTML = `<div class="empty-grid-msg">${category === 'hidden' ? 'No hidden posts.' : 'No active items found.'}</div>`;
+                return;
+            }
+
+            let html = '';
+            for (let i = 0; i < filtered.length; i++) {
+                const post = filtered[i];
+                const views = post.views || post.viewCount || 0;
+                const mediaSrc = (post.images && post.images.length > 0) 
+                    ? post.images[0] 
+                    : (post.imageUrl || post.image || post.mediaUrl || post.photo || '40789.png');
+
+                // Instant setup for first 3. Rest gets placeholder and blur class
+                const isInitialBatch = i < 3;
+                const srcAttr = isInitialBatch ? `src="${mediaSrc}"` : `data-src="${mediaSrc}" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1 1'%3E%3C/svg%3E"`;
+                const blurClass = isInitialBatch ? "" : "lazy-blur";
+
+                html += `
+                    <div class="post-grid-item" onclick="openPost(${i})">
+                        <img ${srcAttr} alt="Post" class="${blurClass}" onload="this.classList.remove('lazy-blur')" decoding="async" onerror="this.onerror=null;this.src='40789.png';">
+                        <div class="post-views-count">
+                            <svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                            <span>${formatCount(views)}</span>
+                        </div>
+                    </div>
+                `;
+            }
+            container.innerHTML = html;
+
+            // Trigger chained loading if items exceed initial 3
+            if (filtered.length > 3) {
+                processNextLoadBatch();
+            }
+        }
+
+        function processNextLoadBatch() {
+            const pendingImages = document.querySelectorAll('.post-grid-item img.lazy-blur');
+            if (pendingImages.length === 0) return;
+
+            // Assign actual SRC for the next 3 blurred items
+            for (let i = 0; i < Math.min(3, pendingImages.length); i++) {
+                const img = pendingImages[i];
+                const realSrc = img.getAttribute('data-src');
+                if (realSrc) img.src = realSrc; 
+            }
+
+            // Chain timeout to process the next set
+            if (pendingImages.length > 3) {
+                batchLoadTimer = setTimeout(processNextLoadBatch, 250); 
+            }
         }
 
         function hydrateCachedPosts() {
@@ -272,24 +312,18 @@
         }
 
         const primaryConfig = { 
-            apiKey: "AIzaSyBXoIY6Q1Cf3Dw0jU5VImIqxchW79OME6Q", 
-            authDomain: "delala-1b582.firebaseapp.com", 
-            databaseURL: "https://delala-1b582-default-rtdb.firebaseio.com", 
-            projectId: "delala-1b582", 
-            storageBucket: "delala-1b582.firebasestorage.app", 
-            messagingSenderId: "1073041850834", 
-            appId: "1:1073041850834:web:fe5d0095c3ff1b238f480b", 
-            measurementId: "G-2XW8F8FKBT" 
+            apiKey: "AIzaSyBXoIY6Q1Cf3Dw0jU5VImIqxchW79OME6Q", authDomain: "delala-1b582.firebaseapp.com", 
+            databaseURL: "https://delala-1b582-default-rtdb.firebaseio.com", projectId: "delala-1b582", 
+            storageBucket: "delala-1b582.firebasestorage.app", messagingSenderId: "1073041850834", 
+            appId: "1:1073041850834:web:fe5d0095c3ff1b238f480b", measurementId: "G-2XW8F8FKBT" 
         };
         const app = initializeApp(primaryConfig);
         const auth = getAuth(app);
         const db = getDatabase(app);
 
         const serviceDbConfig = {
-            apiKey: "AIzaSyD6vEll_UDNulGF5BalpwhR3SbfME7CJCw",
-            authDomain: "tsestlive.firebaseapp.com",
-            databaseURL: "https://tsestlive-default-rtdb.firebaseio.com",
-            projectId: "tsestlive"
+            apiKey: "AIzaSyD6vEll_UDNulGF5BalpwhR3SbfME7CJCw", authDomain: "tsestlive.firebaseapp.com",
+            databaseURL: "https://tsestlive-default-rtdb.firebaseio.com", projectId: "tsestlive"
         };
         const serviceApp = initializeApp(serviceDbConfig, "ServiceApp");
         const serviceDb = getDatabase(serviceApp);
@@ -341,7 +375,6 @@
         }
 
         document.addEventListener('DOMContentLoaded', () => {
-            // Instant zero-delay DOM hydration from Local Storage
             hydrateCachedProfile();
             hydrateCachedPosts();
             restoreCachedTabState();
@@ -359,47 +392,6 @@
                 checkAndRunPendingUpload();
             });
         });
-
-        function renderNativeGrid() {
-            const container = document.getElementById('postsGridContainer');
-            if (!container) return;
-
-            const category = window.activeCategory || 'all';
-            let filtered = [];
-
-            if (category === 'hidden') {
-                filtered = (window.allUserPosts || []).filter(p => p && p.isHidden === true);
-            } else {
-                filtered = (window.allUserPosts || []).filter(p => p && p.isHidden !== true);
-            }
-
-            window.currentDisplayedPosts = filtered;
-
-            if (filtered.length === 0) {
-                container.innerHTML = `<div class="empty-grid-msg">${category === 'hidden' ? 'No hidden posts.' : 'No active items found.'}</div>`;
-                return;
-            }
-
-            let html = '';
-            for (let i = 0; i < filtered.length; i++) {
-                const post = filtered[i];
-                const views = post.views || post.viewCount || 0;
-                const mediaSrc = (post.images && post.images.length > 0) 
-                    ? post.images[0] 
-                    : (post.imageUrl || post.image || post.mediaUrl || post.photo || '40789.png');
-
-                html += `
-                    <div class="post-grid-item" onclick="openPost(${i})">
-                        <img src="${mediaSrc}" alt="Post" decoding="async" onerror="this.onerror=null;this.src='40789.png';">
-                        <div class="post-views-count">
-                            <svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
-                            <span>${formatCount(views)}</span>
-                        </div>
-                    </div>
-                `;
-            }
-            container.innerHTML = html;
-        }
 
         function openPost(index) {
             const post = window.currentDisplayedPosts[index];
@@ -842,7 +834,6 @@
             };
 
             const updateGridData = () => {
-                // Safeguard: Only finalize when both primary & service DB listeners respond
                 if (!primaryLoaded || !serviceLoaded) return;
 
                 let postsList = [...primaryPosts, ...servicePosts];
