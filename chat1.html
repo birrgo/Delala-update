@@ -324,7 +324,6 @@
         const cachedProfileName = localStorage.getItem(`profile_name_${otherUserId}`);
         document.getElementById('chatTitle').textContent = cachedProfileName || fallbackName;
 
-        // FIXED: Replaced undefined variable "alertOverlay" with DOM query.
         function showCustomAlert(title, message, isConfirm = false, onConfirm = null) {
             document.getElementById('alertTitle').textContent = title;
             document.getElementById('alertMessage').textContent = message;
@@ -449,7 +448,6 @@
             Object.keys(messages).forEach(msgKey => {
                 const msg = messages[msgKey];
                 
-                // Hide message if deleted specifically for "me"
                 if (msg.deletedFor && msg.deletedFor[myUserId]) return;
 
                 const isOutgoing = String(msg.sender) === String(myUserId);
@@ -549,7 +547,7 @@
             localStorage.setItem('live_tracking_chatId', chatId);
 
             if (!isResume) {
-                sendRawMessage(`📡 Live Location Sharing\nmaploc.html?liveChatId=${chatId}&targetUserId=${myUserId}`);
+                sendRawMessage(`📡 Live Location Sharing\nmapchat.html?liveChatId=${chatId}&targetUserId=${myUserId}`);
             }
             
             document.getElementById('liveLocationBanner').style.display = 'flex';
@@ -584,7 +582,7 @@
             if (!navigator.geolocation) return showCustomAlert("Error", "Location sharing not supported.");
             navigator.geolocation.getCurrentPosition(
                 (pos) => {
-                    const locLink = `https://www.hulum.online/maploc.html?lat=${pos.coords.latitude}&lng=${pos.coords.longitude}`;
+                    const locLink = `https://www.hulum.online/mapchat.html?lat=${pos.coords.latitude}&lng=${pos.coords.longitude}`;
                     navigator.clipboard.writeText(locLink).then(() => { showCustomAlert("Success", "📍 Location link copied to clipboard!"); })
                     .catch(() => { showCustomAlert("Notice", "Failed to auto-copy. Link: " + locLink); });
                 },
@@ -615,9 +613,8 @@
             let txt = selectedMsgText; 
             closeMsgContext();
             
-            // Format URL if it's a location message to ensure a full clickable link is copied
-            if (txt.includes('maploc.html')) {
-                txt = txt.replace(/maploc\.html/g, 'https://www.hulum.online/maploc.html');
+            if (txt.includes('mapchat.html')) {
+                txt = txt.replace(/mapchat\.html/g, 'https://www.hulum.online/mapchat.html');
             }
 
             if (navigator.share) { navigator.share({ title: 'Delala Chat', text: txt }).catch(()=>{}); }
@@ -628,14 +625,13 @@
             if (selectedMsgText) {
                 sessionStorage.setItem('forward_msg_text', selectedMsgText);
                 closeMsgContext();
-                window.location.href = 'chat.html'; // Redirect to chats list to select forward destination
+                window.location.href = 'chat.html';
             }
         }
 
         function promptDeleteForMe() {
             closeMsgContext();
             showCustomAlert("Delete Message", "Delete this message for yourself?", true, () => {
-                // Adds a sub-node 'deletedFor' saving this specific user's ID
                 db.ref(`chat_messages/${chatId}/${selectedMsgId}/deletedFor/${myUserId}`).set(true)
                 .catch(err => showCustomAlert("Error", err.message));
             });
@@ -643,7 +639,6 @@
         function promptDeleteForBoth() {
             closeMsgContext();
             showCustomAlert("Delete for Everyone", "This will permanently delete the message for everyone.", true, () => {
-                // Deletes the entire message node completely out of the database
                 db.ref(`chat_messages/${chatId}/${selectedMsgId}`).remove()
                     .catch(err => { showCustomAlert("Error", "Failed to delete: " + err.message); });
             });
@@ -664,17 +659,17 @@
         function formatMessage(text) {
             let escaped = escapeHtml(text);
             
-            const liveLocRegex = /📡 Live Location Sharing\nmaploc\.html\?liveChatId=([^&]+)&amp;targetUserId=([^&]+)/g;
+            const liveLocRegex = /📡 Live Location Sharing\nmapchat\.html\?liveChatId=([^&]+)&amp;targetUserId=([^&]+)/g;
             if (liveLocRegex.test(escaped)) {
                 return escaped.replace(liveLocRegex, function(match, lChatId, targetUser) {
-                    return `<div class="location-card"><div class="location-icon-wrapper live"><svg viewBox="0 0 24 24"><path d="M12 22s-8-4.5-8-11.8A8 8 0 0 1 12 2a8 8 0 0 1 8 8.2c0 7.3-8 11.8-8 11.8z"></path><circle cx="12" cy="10" r="3"></circle></svg></div><div class="location-details"><strong>Live Location (Active)</strong><a href="maploc.html?liveChatId=${lChatId}&targetUserId=${targetUser}" class="map-btn">Track Movement</a></div></div>`;
+                    return `<div class="location-card"><div class="location-icon-wrapper live"><svg viewBox="0 0 24 24"><path d="M12 22s-8-4.5-8-11.8A8 8 0 0 1 12 2a8 8 0 0 1 8 8.2c0 7.3-8 11.8-8 11.8z"></path><circle cx="12" cy="10" r="3"></circle></svg></div><div class="location-details"><strong>Live Location (Active)</strong><a href="mapchat.html?liveChatId=${lChatId}&targetUserId=${targetUser}" class="map-btn">Track Movement</a></div></div>`;
                 });
             }
 
-            const customLocRegex = /📍 Shared Location\nmaploc\.html\?lat=([-\d.]+)&amp;lng=([-\d.]+)/g;
+            const customLocRegex = /📍 Shared Location\nmapchat\.html\?lat=([-\d.]+)&amp;lng=([-\d.]+)/g;
             if (customLocRegex.test(escaped)) {
                 return escaped.replace(customLocRegex, function(match, lat, lng) {
-                    return `<div class="location-card"><div class="location-icon-wrapper"><svg viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg></div><div class="location-details"><strong>Pinned Location</strong><a href="maploc.html?lat=${lat}&lng=${lng}" class="map-btn">View on Map</a></div></div>`;
+                    return `<div class="location-card"><div class="location-icon-wrapper"><svg viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg></div><div class="location-details"><strong>Pinned Location</strong><a href="mapchat.html?lat=${lat}&lng=${lng}" class="map-btn">View on Map</a></div></div>`;
                 });
             }
             
