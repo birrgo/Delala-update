@@ -11,7 +11,7 @@
     <style>
         :root {
             --font-main: 'Plus Jakarta Sans', sans-serif;
-            --primary-dark: #001A33; /* Hard dark blue */
+            --primary-dark: #001A33;
             --bg-body: #F4F7F9;
             --card-bg: #FFFFFF;
             --border-color: #E2E8F0;
@@ -55,7 +55,7 @@
         /* In-Header Live Location Pill */
         .live-location-pill {
             display: none; align-items: center; flex-shrink: 0; gap: 6px;
-            background: linear-gradient(145deg, #001c38, #001529); /* 3D Dark effect on dark blue */
+            background: linear-gradient(145deg, #001c38, #001529);
             box-shadow: 2px 2px 5px rgba(0,0,0,0.5), -1px -1px 3px rgba(255,255,255,0.06);
             border: 1px solid rgba(0,0,0,0.3); border-radius: 20px;
             padding: 4px 6px 4px 10px; margin-right: 2px;
@@ -528,11 +528,16 @@
             if (!navigator.geolocation) return showCustomAlert("Error", "Location sharing not supported.");
             if (watchPositionId && !isResume) return showCustomAlert("Notice", "You are already sharing your live location.");
 
+            const liveRef = db.ref(`live_locations/${chatId}/${myUserId}`);
+            
+            // Add onDisconnect hook to automatically remove location if chat is closed
+            liveRef.onDisconnect().remove();
+
             watchPositionId = navigator.geolocation.watchPosition(
                 (pos) => { 
-                    db.ref(`live_locations/${chatId}/${myUserId}`).set({
-                        lat: pos.coords.latitude,
-                        lng: pos.coords.longitude,
+                    liveRef.set({
+                        lat: Number(pos.coords.latitude),
+                        lng: Number(pos.coords.longitude),
                         updatedAt: Date.now()
                     });
                 },
@@ -571,7 +576,12 @@
             localStorage.removeItem('live_tracking_chatId');
 
             if(chatId && myUserId) {
-                db.ref(`live_locations/${chatId}/${myUserId}`).remove();
+                const liveRef = db.ref(`live_locations/${chatId}/${myUserId}`);
+                liveRef.remove();
+                
+                // Cancel the disconnect hook because we manually removed it
+                liveRef.onDisconnect().cancel();
+                
                 sendRawMessage(`🚫 Live Location Ended`);
             }
             document.getElementById('liveLocationBanner').style.display = 'none';
@@ -625,7 +635,7 @@
             if (selectedMsgText) {
                 sessionStorage.setItem('forward_msg_text', selectedMsgText);
                 closeMsgContext();
-                window.location.href = 'chat.html';
+                window.location.href = 'chat.html'; 
             }
         }
 

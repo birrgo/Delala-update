@@ -114,8 +114,9 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        // Added onValue for live database tracking
-        import { getDatabase, ref, child, get, onValue } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+        import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+        // ADDED 'onDisconnect' to auto-delete location when user closes the app/map
+        import { getDatabase, ref, child, get, onValue, set, onDisconnect } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyBXoIY6Q1Cf3Dw0jU5VImIqxchW79OME6Q",
@@ -129,45 +130,65 @@
 
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
+        const auth = getAuth(app);
 
         let map, userMarker, targetMarker;
         let watchPositionId = null;
 
-        // Shared globals for routing
+        let myUserId = null;
         let myLat = null, myLng = null;
         let destLat = null, destLng = null;
+        let lastRouteCalcTime = 0;
+        
+        let liveChatId = null;
+        let targetUserId = null;
+        let isDisconnectHookSet = false;
+
+        function getActiveUserId(firebaseUser) {
+            if (firebaseUser) return firebaseUser.uid;
+            const sessionPhone = localStorage.getItem('auth_session_phone');
+            if (sessionPhone && localStorage.getItem('user_logged_out') !== 'true') return String(sessionPhone).replace(/\D/g, '').replace(/^0+/, '');
+            return null;
+        }
+
+        onAuthStateChanged(auth, user => {
+            myUserId = getActiveUserId(user);
+        });
 
         document.addEventListener('DOMContentLoaded', () => {
             const urlParams = new URLSearchParams(window.location.search);
             
-            // Extracted Chat Live Location Params
-            const liveChatId = urlParams.get('liveChatId');
-            const targetUserId = urlParams.get('targetUserId');
+            liveChatId = urlParams.get('liveChatId');
+            targetUserId = urlParams.get('targetUserId');
             
-            // Standard Fixed Params
             const queryLat = parseFloat(urlParams.get('lat'));
             const queryLng = parseFloat(urlParams.get('lng'));
             const postId = urlParams.get('id') || urlParams.get('postId');
             const itemPath = urlParams.get('path') || 'posts';
 
             document.getElementById('closeMapFullscreenBtn').addEventListener('click', () => {
-                if (window.history.length > 1) window.history.back();
-                else window.location.href = 'index.html'; // Default fallback
+                // Clear location from database gracefully on manual exit
+                if (liveChatId && myUserId) {
+                    const myLiveRef = ref(db, `live_locations/${liveChatId}/${myUserId}`);
+                    set(myLiveRef, null).then(() => {
+                        if (window.history.length > 1) window.history.back();
+                        else window.location.href = 'index.html'; 
+                    });
+                } else {
+                    if (window.history.length > 1) window.history.back();
+                    else window.location.href = 'index.html'; 
+                }
             });
 
             initMapLibreMap();
 
-            // Routing Logic Flow
             if (liveChatId && targetUserId) {
-                // Tracking a live user from chat
                 listenToLiveTargetLocation(liveChatId, targetUserId);
                 startRealtimeTracking();
             } else if (!isNaN(queryLat) && !isNaN(queryLng)) {
-                // Fixed pinned location sent in chat
                 setTargetLocation(queryLat, queryLng, "Pinned Location");
                 startRealtimeTracking();
             } else if (postId) {
-                // Old rental post fallback
                 fetchRentalDataFromFirebase(postId, itemPath);
             } else {
                 startRealtimeTracking();
@@ -215,13 +236,12 @@
             triggerRouteCalculation();
         }
 
-        // NEW: Real-time listener for the chat user's location
         function listenToLiveTargetLocation(chatId, userId) {
             const liveRef = ref(db, `live_locations/${chatId}/${userId}`);
             onValue(liveRef, (snapshot) => {
                 const data = snapshot.val();
                 if (data && data.lat && data.lng) {
-                    setTargetLocation(data.lat, data.lng, "Live Target");
+                    setTargetLocation(data.lat, data.lng, "Partner Location");
                     document.getElementById('distanceLabel').textContent = "Distance to User:";
                 } else {
                     document.getElementById('distanceBanner').style.display = 'flex';
@@ -263,7 +283,7 @@
 
         function startRealtimeTracking() {
             if (!navigator.geolocation) {
-                showErrorModal("GPS Error", "Geolocation is not supported by your device or browser.");
+                showErrorModal("GPS Error", "Geolocation is not supported.");
                 return;
             }
 
@@ -287,7 +307,7 @@
 
             watchPositionId = navigator.geolocation.watchPosition(
                 (pos) => processGpsSuccess(pos),
-                (err) => console.warn("Watch position update warning:", err),
+                (err) => console.warn("Watch position warning:", err),
                 geoOptions
             );
         }
@@ -298,6 +318,23 @@
 
             if (map && userMarker) userMarker.setLngLat([myLng, myLat]);
 
+            if (liveChatId && myUserId) {
+                const myLiveRef = ref(db, `live_locations/${liveChatId}/${myUserId}`);
+                
+                // Ensures if browser is closed/crashes, your location is removed so the other user doesn't see a frozen marker.
+                if (!isDisconnectHookSet) {
+                    onDisconnect(myLiveRef).remove();
+                    isDisconnectHookSet = true;
+                }
+
+                // Strictly cast as Numbers to perfectly match the .validate rules
+                set(myLiveRef, {
+                    lat: Number(myLat),
+                    lng: Number(myLng),
+                    updatedAt: Date.now()
+                }).catch(err => console.log("Failed to sync viewer location:", err));
+            }
+
             if (destLat && destLng) {
                 triggerRouteCalculation();
             } else if (map) {
@@ -306,7 +343,11 @@
         }
 
         function triggerRouteCalculation() {
+            const now = Date.now();
+            if (now - lastRouteCalcTime < 3500) return; 
+            
             if (myLat && myLng && destLat && destLng) {
+                lastRouteCalcTime = now;
                 calculateAndDrawRoadRoute(myLat, myLng, destLat, destLng);
             }
         }
@@ -339,7 +380,6 @@
                             });
                         }
 
-                        // Only re-fit bounds if distance is large to avoid map stuttering during minor live updates
                         if (route.distance > 50) {
                             const bounds = new maplibregl.LngLatBounds().extend([userLng, userLat]).extend([targetLng, targetLat]);
                             map.fitBounds(bounds, { padding: 80, maxZoom: 17 });
