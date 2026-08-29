@@ -287,7 +287,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getDatabase, ref, query, orderByChild, limitToLast, endBefore, get, set, remove, runTransaction, startAt, endAt } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+        import { getDatabase, ref, query, orderByChild, limitToLast, endBefore, get, set, remove, runTransaction, startAt, endAt, equalTo } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
         import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
         const firebaseConfig = {
@@ -453,7 +453,9 @@
             lastLoadedKey = null;
             hasMoreItems = true;
             
-            fetchItemsBatch().finally(() => {
+            const fetchPromise = isNetworkFilterActive ? fetchNetworkItemsFromDB() : fetchItemsBatch();
+
+            fetchPromise.finally(() => {
                 isRefreshingView = false;
                 const ptrEl = document.getElementById('ptr-indicator');
                 const ptrIcon = document.querySelector('.ptr-icon');
@@ -865,6 +867,57 @@
             return true;
         }
 
+        async function fetchNetworkItemsFromDB() {
+            if (!userFollowingSet || userFollowingSet.size === 0) return;
+            isLoading = true;
+            if (DOM.container) DOM.container.innerHTML = `<div style="text-align:center; padding: 30px; font-weight:600; color:#64748B;">Fetching posts from your network...</div>`;
+
+            const nodePaths = ['posts', 'delala_new'];
+            const matchingItems = [];
+            const seenIds = new Set();
+            const friendIds = Array.from(userFollowingSet);
+
+            try {
+                const promises = [];
+                for (const nodePath of nodePaths) {
+                    for (const friendId of friendIds) {
+                        const qUserId = query(ref(db, nodePath), orderByChild('userId'), equalTo(friendId), limitToLast(20));
+                        promises.push(get(qUserId).then(snap => ({ snap, nodePath })));
+                        
+                        const qUid = query(ref(db, nodePath), orderByChild('uid'), equalTo(friendId), limitToLast(20));
+                        promises.push(get(qUid).then(snap => ({ snap, nodePath })));
+                    }
+                }
+
+                const results = await Promise.allSettled(promises);
+
+                results.forEach(res => {
+                    if (res.status === 'fulfilled' && res.value.snap.exists()) {
+                        res.value.snap.forEach(childSnap => {
+                            const rawItem = { id: childSnap.key, _dbPath: res.value.nodePath, ...childSnap.val() };
+                            if (!seenIds.has(rawItem.id) && isRentalCategory(rawItem) && itemMatchesFilters(rawItem)) {
+                                matchingItems.push(rawItem);
+                                seenIds.add(rawItem.id);
+                            }
+                        });
+                    }
+                });
+
+                if (DOM.container) DOM.container.innerHTML = '';
+                matchingItems.sort((a, b) => (b.createdAt || b.timestamp || 0) - (a.createdAt || a.timestamp || 0));
+                localCachedBroadcasts = matchingItems;
+
+                if (matchingItems.length > 0) renderFilteredListings(matchingItems);
+                else renderEmptyState();
+
+                if (DOM.triggerEl) DOM.triggerEl.innerText = matchingItems.length > 0 ? "All network items loaded." : "No recent posts from your network.";
+            } catch (error) {
+                if (DOM.container) DOM.container.innerHTML = '<div style="text-align:center; padding: 20px; color: red;">Error locating network items.</div>';
+            } finally {
+                isLoading = false;
+            }
+        }
+
         async function fetchItemsBatch() {
             if (isLoading || !hasMoreItems) return;
             isLoading = true;
@@ -1029,7 +1082,7 @@
         function setupInfiniteScrollObserver() {
             if (!DOM.triggerEl) return;
             const observer = new IntersectionObserver((entries) => {
-                if (entries[0].isIntersecting && !isLoading && hasMoreItems && !isGpsActive && !isRefreshingView) {
+                if (entries[0].isIntersecting && !isLoading && hasMoreItems && !isGpsActive && !isNetworkFilterActive && !isRefreshingView) {
                     fetchItemsBatch();
                 }
             }, { rootMargin: '200px', threshold: 0.1 });
@@ -1161,7 +1214,11 @@
                 hasMoreItems = true;
                 localCachedBroadcasts = [];
                 
-                fetchItemsBatch();
+                if (isNetworkFilterActive) {
+                    fetchNetworkItemsFromDB();
+                } else {
+                    fetchItemsBatch();
+                }
             });
         }
 

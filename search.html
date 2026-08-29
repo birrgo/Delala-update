@@ -18,7 +18,8 @@
             top: 0;
             background: #ffffff;
             z-index: 50;
-            padding: 15px 20px;
+            /* Pushes the header down below the system status bar in APKs */
+            padding: calc(env(safe-area-inset-top, 25px) + 15px) 20px 15px 20px;
             display: flex;
             align-items: center;
             border-bottom: 1px solid #e2e8f0;
@@ -324,14 +325,11 @@
                             const rType = String(data.rentalType || '').toLowerCase();
                             
                             if (cat.includes('rent') || rType.length > 0) {
-                                // 1. Title Extraction
                                 if (data.title) uniqueTermsMap.set(data.title.toLowerCase().trim(), { term: data.title.trim(), type: 'Listing' });
                                 
-                                // 2. Sub-Category Extraction (Excluding Main Categories)
                                 if (data.subCategory) uniqueTermsMap.set(data.subCategory.toLowerCase().trim(), { term: data.subCategory.trim(), type: 'Sub Category' });
                                 if (data.rentalSubCategory && data.rentalSubCategory !== data.subCategory) uniqueTermsMap.set(data.rentalSubCategory.toLowerCase().trim(), { term: data.rentalSubCategory.trim(), type: 'Sub Category' });
                                 
-                                // 3. Location Extraction
                                 if (data.city) uniqueTermsMap.set(data.city.toLowerCase().trim(), { term: data.city.trim(), type: 'Location' });
                                 if (data.locationDetails) {
                                     if (data.locationDetails.city) uniqueTermsMap.set(data.locationDetails.city.toLowerCase().trim(), { term: data.locationDetails.city.trim(), type: 'Location' });
@@ -339,13 +337,11 @@
                                     if (data.locationDetails.uniqueName) uniqueTermsMap.set(data.locationDetails.uniqueName.toLowerCase().trim(), { term: data.locationDetails.uniqueName.trim(), type: 'Location' });
                                 }
 
-                                // 4. Specific Details (like Guest house names or car models)
                                 if (data.categorySpecificDetails) {
                                     if (data.categorySpecificDetails.guestHouseName) uniqueTermsMap.set(data.categorySpecificDetails.guestHouseName.toLowerCase().trim(), { term: data.categorySpecificDetails.guestHouseName.trim(), type: 'Guest House' });
                                     if (data.categorySpecificDetails.carModel) uniqueTermsMap.set(data.categorySpecificDetails.carModel.toLowerCase().trim(), { term: data.categorySpecificDetails.carModel.trim(), type: 'Vehicle' });
                                 }
 
-                                // 5. Description Keyword Tokenization (Extracts meaningful words from descriptions)
                                 const textToParse = `${data.title || ''} ${data.description || ''} ${data.body || ''}`.toLowerCase();
                                 const words = textToParse.match(/\b[a-zA-Z]{4,20}\b/g) || [];
                                 words.forEach(word => {
