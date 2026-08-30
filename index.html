@@ -93,7 +93,7 @@
             50% { box-shadow: 0 0 20px 6px rgba(0, 255, 255, 0.7); }
         }
 
-        /* --- Header Section (Blur and Background Removed) --- */
+        /* --- Header Section --- */
         .header {
             position: absolute;
             top: 0;
@@ -139,7 +139,8 @@
             animation: float 4s ease-in-out infinite;
         }
 
-        .pin-center { top: 20%; left: 50%; animation-delay: 0s; }
+        /* Shifted center pin down from 20% to 24% to clear header text */
+        .pin-center { top: 24%; left: 50%; animation-delay: 0s; }
         .pin-rent { top: 38%; left: 16%; animation-delay: 0.5s; }
         .pin-sell { top: 38%; left: 84%; animation-delay: 1.5s; }
         .pin-buy { top: 61%; left: 32%; animation-delay: 1s; }
@@ -247,14 +248,15 @@
             color: var(--text-muted);
         }
 
-        /* --- Footer Section (Button moved above text) --- */
+        /* --- Footer Section --- */
         .footer {
             position: absolute;
             bottom: 0;
             left: 0;
             width: 100%;
             z-index: 10;
-            padding: 40px 20px 35px 20px;
+            /* Increased bottom padding from 35px to 70px to clear mobile nav bar */
+            padding: 40px 20px 70px 20px;
             background: linear-gradient(to top, rgba(2, 6, 23, 0.95) 0%, rgba(2, 6, 23, 0.6) 75%, transparent 100%);
             text-align: center;
             animation: slideUp 1s cubic-bezier(0.25, 1, 0.5, 1) forwards;
@@ -284,7 +286,7 @@
             transition: var(--transition-smooth);
             position: relative;
             z-index: 2;
-            margin-bottom: 15px; /* Spacing between button and text below it */
+            margin-bottom: 15px; 
         }
 
         .btn-start:hover {
