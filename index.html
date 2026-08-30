@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     
-    <!-- Primary Page Metadata -->
     <title>Delala | Rentals, Selling, Job Vacancies & Tech Tips</title>
     <meta name="title" content="Delala | Rentals, Selling, Job Vacancies & Tech Tips">
     <meta name="description" content="Delala is your primary platform for rental listings, selling items, online vacancies, tech tips, and job opportunities in Ethiopia.">
@@ -13,7 +12,6 @@
     <meta name="robots" content="index, follow, max-image-preview:large">
     <link rel="canonical" href="https://delala.online/">
 
-    <!-- PWA Web App Manifest & Mobile Configuration -->
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#020617">
     <meta name="mobile-web-app-capable" content="yes">
@@ -24,14 +22,12 @@
     <link rel="icon" type="image/png" sizes="192x192" href="s.png">
     <link rel="icon" type="image/png" sizes="512x512" href="s.png">
 
-    <!-- Fonts and Icons -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;900&display=swap" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     
     <style>
-        /* --- CSS Variables --- */
         :root {
             --text-main: #ffffff;
             --text-muted: #e2e8f0;
@@ -40,7 +36,6 @@
             --transition-smooth: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
         }
 
-        /* --- Reset & Base Styles --- */
         * {
             box-sizing: border-box;
             margin: 0;
@@ -58,14 +53,13 @@
             overflow: hidden;
         }
 
-        /* --- App Container --- */
         .app-view {
             height: 100vh;
             width: 100%;
             aspect-ratio: 9 / 16;
             background-image: url('bgu.png');
             background-size: cover;
-            background-position: center;
+            background-position: center bottom;
             position: relative;
             overflow: hidden;
             display: flex;
@@ -82,7 +76,6 @@
             }
         }
 
-        /* --- Animations --- */
         @keyframes fadeInDown {
             0% { opacity: 0; transform: translateY(-20px); }
             100% { opacity: 1; transform: translateY(0); }
@@ -100,7 +93,7 @@
             50% { box-shadow: 0 0 20px 6px rgba(0, 255, 255, 0.7); }
         }
 
-        /* --- Header Section --- */
+        /* --- Header Section (Blur and Background Removed) --- */
         .header {
             position: absolute;
             top: 0;
@@ -111,14 +104,9 @@
             flex-direction: column;
             align-items: center;
             justify-content: flex-start;
-            padding: clamp(35px, 6vh, 45px) 20px 60px 20px;
-            background: linear-gradient(180deg, rgba(2, 6, 23, 0.9) 0%, rgba(2, 6, 23, 0.6) 70%, transparent 100%);
+            padding: clamp(35px, 6vh, 45px) 20px 20px 20px;
             text-align: center;
             animation: fadeInDown 1s cubic-bezier(0.25, 1, 0.5, 1) forwards;
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
-            -webkit-mask-image: linear-gradient(180deg, black 65%, transparent 100%);
-            mask-image: linear-gradient(180deg, black 65%, transparent 100%);
         }
 
         .header h2 {
@@ -140,7 +128,6 @@
             z-index: 2;
         }
 
-        /* --- Interactive Map Layer --- */
         .map-layer {
             position: absolute;
             top: 0; left: 0; right: 0; bottom: 0;
@@ -152,11 +139,11 @@
             animation: float 4s ease-in-out infinite;
         }
 
-        .pin-center { top: 27%; left: 50%; animation-delay: 0s; }
-        .pin-rent { top: 45%; left: 16%; animation-delay: 0.5s; }
-        .pin-sell { top: 45%; left: 84%; animation-delay: 1.5s; }
-        .pin-buy { top: 68%; left: 32%; animation-delay: 1s; }
-        .pin-hire { top: 68%; left: 68%; animation-delay: 2s; }
+        .pin-center { top: 20%; left: 50%; animation-delay: 0s; }
+        .pin-rent { top: 38%; left: 16%; animation-delay: 0.5s; }
+        .pin-sell { top: 38%; left: 84%; animation-delay: 1.5s; }
+        .pin-buy { top: 61%; left: 32%; animation-delay: 1s; }
+        .pin-hire { top: 61%; left: 68%; animation-delay: 2s; }
 
         .pin {
             position: absolute;
@@ -260,14 +247,14 @@
             color: var(--text-muted);
         }
 
-        /* --- Footer Section --- */
+        /* --- Footer Section (Button moved above text) --- */
         .footer {
             position: absolute;
             bottom: 0;
             left: 0;
             width: 100%;
             z-index: 10;
-            padding: 60px 20px 35px 20px;
+            padding: 40px 20px 35px 20px;
             background: linear-gradient(to top, rgba(2, 6, 23, 0.95) 0%, rgba(2, 6, 23, 0.6) 75%, transparent 100%);
             text-align: center;
             animation: slideUp 1s cubic-bezier(0.25, 1, 0.5, 1) forwards;
@@ -282,18 +269,6 @@
             align-items: center;
         }
 
-        .footer p {
-            font-size: clamp(12px, 1.8vh, 15px);
-            line-height: 1.6;
-            color: var(--text-muted);
-            margin-bottom: 25px;
-            font-weight: 500;
-            text-shadow: 0 2px 4px rgba(0,0,0,1);
-            position: relative;
-            z-index: 2;
-        }
-
-        /* --- Flat Primary Button --- */
         .btn-start {
             display: flex;
             align-items: center;
@@ -304,22 +279,23 @@
             border-radius: 50px;
             text-decoration: none;
             color: var(--text-main);
-            background-color: #1e3a8a; /* Clear dark blue */
+            background-color: #1e3a8a; 
             border: none;
             transition: var(--transition-smooth);
             position: relative;
             z-index: 2;
+            margin-bottom: 15px; /* Spacing between button and text below it */
         }
 
         .btn-start:hover {
             transform: translateY(-2px);
-            background-color: #1e40af; /* Slightly lighter on hover */
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3); /* Subtle drop shadow on hover only */
+            background-color: #1e40af; 
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3); 
         }
 
         .btn-start:active {
             transform: translateY(0);
-            background-color: #172554; /* Darker blue on click */
+            background-color: #172554; 
             box-shadow: none;
         }
 
@@ -330,9 +306,16 @@
             text-transform: uppercase;
         }
 
-        /* =========================================================
-           POPUP OVERLAY STYLES (Offline & Low Connection)
-           ========================================================= */
+        .footer p {
+            font-size: clamp(12px, 1.8vh, 15px);
+            line-height: 1.6;
+            color: var(--text-muted);
+            font-weight: 500;
+            text-shadow: 0 2px 4px rgba(0,0,0,1);
+            position: relative;
+            z-index: 2;
+        }
+
         .connection-popup-overlay {
             position: fixed;
             top: 0; left: 0;
@@ -437,7 +420,6 @@
 </head>
 <body>
 
-    <!-- Main Map App UI -->
     <main class="app-view">
         
         <header class="header">
@@ -501,18 +483,14 @@
         </section>
 
         <footer class="footer">
-            <p>Rent, Sell, Buy & Hire. Discover everything near you.<br>ያከራዩ፣ ይሽጡ፣ ይግዙ፣ አገልግሎቶችን ያግኙ። ሁሉንም ነገር በአቅራቢያዎ ያግኙ።</p>
-            
             <a href="rental.html" class="btn-start" aria-label="Get Started">
                 <span>Get Started</span>
             </a>
+            <p>Rent, Sell, Buy & Hire. Discover everything near you.<br>ያከራዩ፣ ይሽጡ፣ ይግዙ፣ አገልግሎቶችን ያግኙ። ሁሉንም ነገር በአቅራቢያዎ ያግኙ።</p>
         </footer>
 
     </main>
 
-    <!-- ==========================================
-         OFFLINE POPUP OVERLAY
-         ========================================== -->
     <div id="offlinePopup" class="connection-popup-overlay">
         <div class="status-card">
             <div class="icon-container offline-icon">
@@ -533,9 +511,6 @@
         </div>
     </div>
 
-    <!-- ==========================================
-         SLOW CONNECTION POPUP OVERLAY
-         ========================================== -->
     <div id="lowConnectionPopup" class="connection-popup-overlay">
         <div class="status-card">
             <div class="icon-container low-icon">
@@ -554,15 +529,10 @@
         </div>
     </div>
 
-    <!-- ==========================================
-         SCRIPTS: Connection Tracking & PWA Setup
-         ========================================== -->
     <script>
-        // DOM Elements
         const offlinePopup = document.getElementById('offlinePopup');
         const lowConnectionPopup = document.getElementById('lowConnectionPopup');
 
-        // --- Offline Status Functions ---
         function showOfflinePopup() {
             lowConnectionPopup.classList.remove('show');
             offlinePopup.classList.add('show');
@@ -584,7 +554,6 @@
         window.addEventListener('offline', showOfflinePopup);
         window.addEventListener('online', hideOfflinePopup);
 
-        // --- Slow Connection Functions ---
         function hideLowConnectionPopup() {
             lowConnectionPopup.classList.remove('show');
         }
@@ -605,7 +574,6 @@
             navigator.connection.addEventListener('change', checkConnectionSpeed);
         }
 
-        // --- Initialization on Load ---
         window.addEventListener('load', () => {
             if (!navigator.onLine) {
                 showOfflinePopup();
@@ -618,19 +586,6 @@
                     .then(reg => console.log('Service Worker registered:', reg.scope))
                     .catch(err => console.error('Service Worker registration failed:', err));
             }
-        });
-
-        // --- PWA Installation Logic ---
-        let deferredPrompt;
-
-        window.addEventListener('beforeinstallprompt', (e) => {
-            e.preventDefault();
-            deferredPrompt = e;
-        });
-
-        window.addEventListener('appinstalled', () => {
-            deferredPrompt = null;
-            console.log('Delala app installed successfully.');
         });
     </script>
 
