@@ -1472,19 +1472,19 @@
 
             if (isClothing && Object.keys(specs).length > 0) {
                 html += `<div class="category-specs-title" style="margin-bottom:8px;">Clothing Details</div><div class="info-terms-list" style="flex-direction: column; gap: 6px;">`;
-                if (specs.clothingCategory) html += `<div style="font-size:12px; color:#334155;">👕 Category: <strong>${specs.clothingCategory}</strong></div>`;
-                if (specs.targetGender) html += `<div style="font-size:12px; color:#334155;">👤 Target: <strong>${specs.targetGender}</strong></div>`;
-                if (specs.clothingSize) html += `<div style="font-size:12px; color:#334155;">📏 Size: <strong>${specs.clothingSize}</strong></div>`;
-                if (specs.quantity) html += `<div style="font-size:12px; color:#334155;">📦 Quantity: <strong>${specs.quantity}</strong></div>`;
+                if (specs.clothingCategory) html += `<div style="font-size:12px; color:#334155;"> Category: <strong>${specs.clothingCategory}</strong></div>`;
+                if (specs.targetGender) html += `<div style="font-size:12px; color:#334155;"> Target: <strong>${specs.targetGender}</strong></div>`;
+                if (specs.clothingSize) html += `<div style="font-size:12px; color:#334155;"> Size: <strong>${specs.clothingSize}</strong></div>`;
+                if (specs.quantity) html += `<div style="font-size:12px; color:#334155;"> Quantity: <strong>${specs.quantity}</strong></div>`;
                 html += `</div></div>`;
                 return html;
             }
 
             if (isGuestHouse && Object.keys(specs).length > 0) {
                 html += `<div class="category-specs-title" style="margin-bottom:8px;">Guest House Details</div><div class="info-terms-list" style="flex-direction: column; gap: 6px;">`;
-                if (specs.guestHouseName) html += `<div style="font-size:12px; color:#334155;">🏨 Name: <strong>${specs.guestHouseName}</strong></div>`;
-                if (specs.totalRooms) html += `<div style="font-size:12px; color:#334155;">🚪 Rooms: <strong>${specs.totalRooms} ${specs.roomTypes ? `(${specs.roomTypes})` : ''}</strong></div>`;
-                if (specs.guestOption) html += `<div style="font-size:12px; color:#334155;">🛏️ Option: <strong>${specs.guestOption}</strong></div>`;
+                if (specs.guestHouseName) html += `<div style="font-size:12px; color:#334155;"> Name: <strong>${specs.guestHouseName}</strong></div>`;
+                if (specs.totalRooms) html += `<div style="font-size:12px; color:#334155;"> Rooms: <strong>${specs.totalRooms} ${specs.roomTypes ? `(${specs.roomTypes})` : ''}</strong></div>`;
+                if (specs.guestOption) html += `<div style="font-size:12px; color:#334155;"> Option: <strong>${specs.guestOption}</strong></div>`;
                 if (specs.amenities && Array.isArray(specs.amenities) && specs.amenities.length > 0) {
                     html += `<div style="font-size:12px; color:#334155;">✨ Amenities: <strong style="font-size:11px;">${specs.amenities.slice(0, 3).join(', ')}${specs.amenities.length > 3 ? '...' : ''}</strong></div>`;
                 }
